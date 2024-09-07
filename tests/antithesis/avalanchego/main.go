@@ -59,7 +59,6 @@ func main() {
 	wallet, err := primary.MakeWallet(ctx, &primary.WalletConfig{
 		URI:          c.URIs[0],
 		AVAXKeychain: kc,
-		EthKeychain:  kc,
 	})
 	require.NoError(err, "failed to initialize wallet")
 	log.Printf("synced wallet in %s", time.Since(walletSyncStartTime))
@@ -114,7 +113,6 @@ func main() {
 		wallet, err := primary.MakeWallet(ctx, &primary.WalletConfig{
 			URI:          uri,
 			AVAXKeychain: kc,
-			EthKeychain:  kc,
 		})
 		require.NoError(err, "failed to initialize wallet")
 		log.Printf("synced wallet in %s", time.Since(walletSyncStartTime))

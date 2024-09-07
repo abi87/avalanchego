@@ -82,7 +82,6 @@ import (
 
 	avmconfig "github.com/ava-labs/avalanchego/vms/avm/config"
 	platformconfig "github.com/ava-labs/avalanchego/vms/platformvm/config"
-	coreth "github.com/ava-labs/coreth/plugin/evm"
 )
 
 const (
@@ -1247,7 +1246,9 @@ func (n *Node) initVMs() error {
 				CreateAssetTxFee: n.Config.CreateAssetTxFee,
 			},
 		}),
-		n.VMManager.RegisterFactory(context.TODO(), constants.EVMID, &coreth.Factory{}),
+
+		// ABENEGIA: disabled coreth dependency to get rid of goethereum deps
+		// n.VMManager.RegisterFactory(context.TODO(), constants.EVMID, &coreth.Factory{}),
 	)
 	if err != nil {
 		return err

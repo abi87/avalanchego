@@ -44,7 +44,6 @@ func createFunc(c *cobra.Command, args []string) error {
 	wallet, err := primary.MakeWallet(ctx, &primary.WalletConfig{
 		URI:          config.URI,
 		AVAXKeychain: kc,
-		EthKeychain:  kc,
 		SubnetIDs:    []ids.ID{config.SubnetID},
 	})
 	if err != nil {

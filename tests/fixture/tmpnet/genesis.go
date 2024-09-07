@@ -4,19 +4,12 @@
 package tmpnet
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"math/big"
 	"time"
-
-	"github.com/ava-labs/coreth/core"
-	"github.com/ava-labs/coreth/params"
-	"github.com/ava-labs/coreth/plugin/evm"
 
 	"github.com/ava-labs/avalanchego/genesis"
 	"github.com/ava-labs/avalanchego/ids"
-	"github.com/ava-labs/avalanchego/upgrade"
 	"github.com/ava-labs/avalanchego/utils/constants"
 	"github.com/ava-labs/avalanchego/utils/crypto/secp256k1"
 	"github.com/ava-labs/avalanchego/utils/formatting/address"
@@ -24,17 +17,7 @@ import (
 	"github.com/ava-labs/avalanchego/vms/platformvm/reward"
 )
 
-const (
-	defaultGasLimit = uint64(100_000_000) // Gas limit is arbitrary
-
-	// Arbitrarily large amount of AVAX to fund keys on the X-Chain for testing
-	defaultFundedKeyXChainAmount = 30 * units.MegaAvax
-)
-
 var (
-	// Arbitrarily large amount of AVAX (10^12) to fund keys on the C-Chain for testing
-	defaultFundedKeyCChainAmount = new(big.Int).Exp(big.NewInt(10), big.NewInt(30), nil)
-
 	errNoKeysForGenesis           = errors.New("no keys to fund for genesis")
 	errInvalidNetworkIDForGenesis = errors.New("network ID can't be mainnet, testnet or local network ID for genesis")
 	errMissingStakersForGenesis   = errors.New("no stakers provided for genesis")
@@ -114,13 +97,6 @@ func NewTestGenesis(
 
 	// Ensure pre-funded keys have arbitrary large balances on both chains to support testing
 	xChainBalances := make(XChainBalanceMap, len(keysToFund))
-	cChainBalances := make(core.GenesisAlloc, len(keysToFund))
-	for _, key := range keysToFund {
-		xChainBalances[key.Address()] = defaultFundedKeyXChainAmount
-		cChainBalances[evm.GetEthAddress(key)] = core.GenesisAccount{
-			Balance: defaultFundedKeyCChainAmount,
-		}
-	}
 
 	// Set X-Chain balances
 	for xChainAddress, balance := range xChainBalances {
@@ -146,22 +122,6 @@ func NewTestGenesis(
 			},
 		)
 	}
-
-	chainID := big.NewInt(int64(networkID))
-	// Define C-Chain genesis
-	cChainGenesis := &core.Genesis{
-		// TODO: remove this after Etna and set only the chainID
-		Config:     params.GetChainConfig(upgrade.Default, chainID), // upgrade will be again set by VM according to the snow.Context
-		Difficulty: big.NewInt(0),                                   // Difficulty is a mandatory field
-		Timestamp:  uint64(upgrade.InitiallyActiveTime.Unix()),      // This time enables Avalanche upgrades by default
-		GasLimit:   defaultGasLimit,
-		Alloc:      cChainBalances,
-	}
-	cChainGenesisBytes, err := json.Marshal(cChainGenesis)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal C-Chain genesis: %w", err)
-	}
-	config.CChainGenesis = string(cChainGenesisBytes)
 
 	return config, nil
 }

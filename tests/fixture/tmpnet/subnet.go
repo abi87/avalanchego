@@ -102,7 +102,6 @@ func (s *Subnet) GetWallet(ctx context.Context, uri string) (primary.Wallet, err
 	return primary.MakeWallet(ctx, &primary.WalletConfig{
 		URI:          uri,
 		AVAXKeychain: keychain,
-		EthKeychain:  keychain,
 		SubnetIDs:    subnetIDs,
 	})
 }

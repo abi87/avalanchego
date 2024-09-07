@@ -5,16 +5,10 @@ package e2e
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"math/big"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/ava-labs/coreth/core/types"
-	"github.com/ava-labs/coreth/ethclient"
-	"github.com/ava-labs/coreth/interfaces"
 	"github.com/stretchr/testify/require"
 
 	"github.com/ava-labs/avalanchego/config"
@@ -65,7 +59,6 @@ func NewWallet(tc tests.TestContext, keychain *secp256k1fx.Keychain, nodeURI tmp
 	baseWallet, err := primary.MakeWallet(tc.DefaultContext(), &primary.WalletConfig{
 		URI:          nodeURI.URI,
 		AVAXKeychain: keychain,
-		EthKeychain:  keychain,
 	})
 	require.NoError(tc, err)
 	return primary.NewWalletWithOptions(
@@ -76,16 +69,6 @@ func NewWallet(tc tests.TestContext, keychain *secp256k1fx.Keychain, nodeURI tmp
 			},
 		),
 	)
-}
-
-// Create a new eth client targeting the specified node URI.
-func NewEthClient(tc tests.TestContext, nodeURI tmpnet.NodeURI) ethclient.Client {
-	tc.Outf("{{blue}} initializing a new eth client for node %s with URI: %s {{/}}\n", nodeURI.NodeID, nodeURI.URI)
-	nodeAddress := strings.Split(nodeURI.URI, "//")[1]
-	uri := fmt.Sprintf("ws://%s/ext/bc/C/ws", nodeAddress)
-	client, err := ethclient.Dial(uri)
-	require.NoError(tc, err)
-	return client
 }
 
 // Adds an ephemeral node intended to be used by a single test.
@@ -110,50 +93,6 @@ func WaitForHealthy(t require.TestingT, node *tmpnet.Node) {
 	ctx, cancel := context.WithTimeout(context.Background(), DefaultTimeout)
 	defer cancel()
 	require.NoError(t, tmpnet.WaitForHealthy(ctx, node))
-}
-
-// Sends an eth transaction, waits for the transaction receipt to be issued
-// and checks that the receipt indicates success.
-func SendEthTransaction(tc tests.TestContext, ethClient ethclient.Client, signedTx *types.Transaction) *types.Receipt {
-	require := require.New(tc)
-
-	txID := signedTx.Hash()
-	tc.Outf(" sending eth transaction with ID: %s\n", txID)
-
-	require.NoError(ethClient.SendTransaction(tc.DefaultContext(), signedTx))
-
-	// Wait for the receipt
-	var receipt *types.Receipt
-	tc.Eventually(func() bool {
-		var err error
-		receipt, err = ethClient.TransactionReceipt(tc.DefaultContext(), txID)
-		if errors.Is(err, interfaces.NotFound) {
-			return false // Transaction is still pending
-		}
-		require.NoError(err)
-		return true
-	}, DefaultTimeout, DefaultPollingInterval, "failed to see transaction acceptance before timeout")
-
-	require.Equal(types.ReceiptStatusSuccessful, receipt.Status)
-	return receipt
-}
-
-// Determines the suggested gas price for the configured client that will
-// maximize the chances of transaction acceptance.
-func SuggestGasPrice(tc tests.TestContext, ethClient ethclient.Client) *big.Int {
-	gasPrice, err := ethClient.SuggestGasPrice(tc.DefaultContext())
-	require.NoError(tc, err)
-	// Double the suggested gas price to maximize the chances of
-	// acceptance. Maybe this can be revisited pending resolution of
-	// https://github.com/ava-labs/coreth/issues/314.
-	gasPrice.Add(gasPrice, gasPrice)
-	return gasPrice
-}
-
-// Helper simplifying use via an option of a gas price appropriate for testing.
-func WithSuggestedGasPrice(tc tests.TestContext, ethClient ethclient.Client) common.Option {
-	baseFee := SuggestGasPrice(tc, ethClient)
-	return common.WithBaseFee(baseFee)
 }
 
 // Verify that a new node can bootstrap into the network. If the check wasn't skipped,

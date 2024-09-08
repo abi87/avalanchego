@@ -79,7 +79,7 @@ func (b *batch) Reset() {
 func (b *batch) Replay(w database.KeyValueWriterDeleter) error {
 	reader := b.batch.Reader()
 	for {
-		kind, k, v, ok := reader.Next()
+		kind, k, v, ok, _ := reader.Next() // TODO ABENEGIA: improve err handling
 		if !ok {
 			return nil
 		}
